@@ -92,7 +92,7 @@ install.packages(c(
 
 ```r
 # Clone repository
-git clone https://github.com/mutuac-bit/educational-equity-family-engagement
+git clone https://github.com/mutuac-bit/educational-equity-family-engagement 
 cd educational-equity-project
 
 # Open RStudio project
