@@ -1,0 +1,388 @@
+---
+title: "Educational Equity Project"
+author: "Cynthia M."
+format: html
+---
+
+---
+title: "Data Preparation - Educational Equity Project"
+author: "Your Name"
+date: today
+format: 
+  html:
+    code-fold: false
+    toc: true
+execute:
+  warning: false
+  message: false
+---
+
+# Setup
+```{r setup}
+# Load packages
+library(tidyverse)      # Data manipulation
+library(readxl)         # Read Excel files
+library(janitor)        # Clean names
+library(skimr)          # Data summaries
+library(naniar)         # Missing data viz
+library(here)           # File paths
+
+# Set theme for all plots
+theme_set(theme_minimal(base_size = 12))
+
+# Custom color palette (colorblind-friendly)
+project_colors <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", 
+                    "#0072B2", "#D55E00", "#CC79A7")
+```
+
+# Import Data
+```{r import}
+# Read 2019 data
+pfi_2019 <- read_excel("pfi_data.xlsx", sheet = "2019")
+
+# Read 2016 data  
+pfi_2016 <- read_excel("pfi_data.xlsx", sheet = "2016")
+
+# Check dimensions
+cat("2019 data:", nrow(pfi_2019), "rows,", ncol(pfi_2019), "columns\n")
+cat("2016 data:", nrow(pfi_2016), "rows,", ncol(pfi_2016), "columns\n")
+
+# Check if column names match
+all_match <- all(names(pfi_2019) == names(pfi_2016))
+cat("\nColumn names match:", all_match, "\n")
+```
+
+# Variable Selection & Creation
+```{r variable_selection}
+# Select key variables for analysis
+# (We'll expand this based on what we see in the data)
+
+key_vars <- c(
+  # Identifiers
+  "BASMID",
+  
+  # Outcome variables
+  "SEGRADES",        # Student grades (primary outcome)
+  "SEGRADEQ",        # Work quality
+  "SEENJOY",         # Enjoys school
+  "SEABSNT",         # Days absent (Poisson outcome)
+  "SEREPEAT",        # Grade repetition
+  
+  # School engagement frequency (Poisson outcome alternative)
+  "FSFREQ",          # Times participated in school meetings
+  
+  # School engagement activities (individual indicators)
+  "FSSPORTX",        # Attended school event
+  "FSVOL",           # Volunteered
+  "FSMTNG",          # Attended meeting
+  "FSPTMTNG",        # PTA meeting
+  "FSATCNFN",        # Parent-teacher conference
+  "FSFUNDRS",        # Fundraising
+  "FSCOMMTE",        # Committee
+  "FSCOUNSLR",       # Guidance counselor
+  
+  # Homework involvement
+  "FHHOME",          # Days per week doing homework
+  "FHWKHRS",         # Hours per week on homework
+  "FHCHECKX",        # Checks homework
+  "FHHELP",          # Days help with homework
+  
+  # Cultural enrichment - weekly
+  "FOSTORY2X",       # Told story
+  "FOCRAFTS",        # Arts/crafts
+  "FOGAMES",         # Board games
+  "FOBUILDX",        # Projects
+  "FOSPORT",         # Sports
+  "FODINNERX",       # Family dinners
+  
+  # Cultural enrichment - monthly
+  "FOLIBRAYX",       # Library
+  "FOBOOKSTX",       # Bookstore
+  "FOCONCRTX",       # Concert/play
+  "FOMUSEUMX",       # Museum
+  "FOZOOX",          # Zoo
+  
+  # Socioeconomic variables
+  "TTLHHINC",        # Household income
+  "PARGRADEX",       # Parent education (derived)
+  "P2GUARD",         # Second parent present
+  
+  # School type
+  "EDCPUB",          # Public school
+  "EDCCAT",          # Private Catholic
+  "EDCREL",          # Private religious
+  "EDCPRI",          # Private non-religious
+  
+  # School choice
+  "SCCHOICE",        # Has school choice
+  "SPUBCHOIX",       # District allows choice
+  "SCONSIDR",        # Considered other schools
+  "SCHRTSCHL",       # Charter school
+  "SCHLMAGNET",      # Magnet school
+  
+  # Student characteristics
+  "ALLGRADEX",       # Current grade
+  "CSEX",            # Sex
+  "RACEETH",         # Race/ethnicity (derived)
+  
+  # Disability
+  "DSBLTY",          # Has disability (derived)
+  
+  # Family structure
+  "NUMSIBSX",        # Number siblings (derived)
+  
+  # Assistance programs (resource indicators)
+  "HFOODST",         # Food stamps
+  "HMEDICAID"        # Medicaid
+)
+
+# Select and add year indicator
+pfi_2019_selected <- pfi_2019 %>%
+  select(any_of(key_vars)) %>%
+  mutate(survey_year = 2019)
+
+pfi_2016_selected <- pfi_2016 %>%
+  select(any_of(key_vars)) %>%
+  mutate(survey_year = 2016)
+
+# Stack datasets
+pfi_combined <- bind_rows(pfi_2019_selected, pfi_2016_selected)
+
+cat("Combined dataset:", nrow(pfi_combined), "rows,", 
+    ncol(pfi_combined), "columns\n")
+```
+
+# Initial Data Inspection
+```{r inspect}
+# Look at first few rows
+head(pfi_combined)
+
+# Check structure
+glimpse(pfi_combined)
+
+# Summary statistics
+skim(pfi_combined)
+```
+
+# Data Cleaning & Recoding
+```{r cleaning}
+pfi_clean <- pfi_combined %>%
+  mutate(
+    # ===== OUTCOME VARIABLES =====
+    
+    # Grades (1=Mostly A's, 2=B's, 3=C's, 4=D/F's, 5=No grades)
+    # Exclude "no grades" responses
+    grades_cat = case_when(
+      SEGRADES == 1 ~ "High_Achievers",
+      SEGRADES == 2 ~ "Solid_Performers", 
+      SEGRADES == 3 ~ "Struggling",
+      SEGRADES == 4 ~ "At_Risk",
+      TRUE ~ NA_character_
+    ),
+    grades_cat = factor(grades_cat, 
+                       levels = c("High_Achievers", "Solid_Performers", 
+                                 "Struggling", "At_Risk")),
+    
+    # Binary outcome: At-Risk indicator
+    # At-risk if C's or worse AND (high absence OR doesn't enjoy school)
+    at_risk = case_when(
+      SEGRADES >= 3 & (SEABSNT > 10 | SEENJOY >= 3) ~ 1,
+      SEGRADES <= 2 ~ 0,
+      TRUE ~ NA_real_
+    ),
+    
+    # Days absent (Poisson outcome) - keep as numeric
+    days_absent = SEABSNT,
+    
+    # School meeting frequency (alternative Poisson outcome)
+    meetings_attended = FSFREQ,
+    
+    # ===== SCHOOL ENGAGEMENT ACTIVITIES =====
+    # Recode from 1=Yes, 2=No to 1=Yes, 0=No
+    across(c(FSSPORTX, FSVOL, FSMTNG, FSPTMTNG, FSATCNFN, 
+             FSFUNDRS, FSCOMMTE, FSCOUNSLR),
+           ~case_when(
+             .x == 1 ~ 1,
+             .x == 2 ~ 0,
+             TRUE ~ NA_real_
+           ),
+           .names = "{.col}_binary"),
+    
+    # Create school engagement composite (count of activities)
+    school_engagement = rowSums(
+      select(., ends_with("_binary")), 
+      na.rm = TRUE
+    ),
+    
+    # ===== HOMEWORK INVOLVEMENT =====
+    # Standardize and create composite
+    homework_involvement = scale(
+      rowMeans(
+        select(., FHHOME, FHWKHRS, FHHELP), 
+        na.rm = TRUE
+      )
+    )[,1],
+    
+    # ===== CULTURAL ENRICHMENT =====
+    # Recode monthly activities (1=Yes, 2=No to 1/0)
+    across(c(FOLIBRAYX, FOBOOKSTX, FOCONCRTX, FOMUSEUMX, FOZOOX),
+           ~case_when(
+             .x == 1 ~ 1,
+             .x == 2 ~ 0,
+             TRUE ~ NA_real_
+           ),
+           .names = "{.col}_binary"),
+    
+    # Weekly activities (already in good format mostly)
+    # FODINNERX is 0-7, others need recoding from 1/2 to 1/0
+    across(c(FOSTORY2X, FOCRAFTS, FOGAMES, FOBUILDX, FOSPORT),
+           ~case_when(
+             .x == 1 ~ 1,
+             .x == 2 ~ 0,
+             TRUE ~ NA_real_
+           ),
+           .names = "{.col}_binary"),
+    
+    # Create cultural enrichment composite
+    # Weight monthly activities less than weekly
+    cultural_enrichment = rowSums(
+      select(., FOSTORY2X_binary, FOCRAFTS_binary, FOGAMES_binary, 
+             FOBUILDX_binary, FOSPORT_binary), 
+      na.rm = TRUE
+    ) + 
+    (rowSums(
+      select(., ends_with("YX_binary")), 
+      na.rm = TRUE
+    ) / 4) +  # Monthly activities weighted as 1/4 week
+    (FODINNERX / 7),  # Dinners as proportion of week
+    
+    # ===== SOCIOECONOMIC VARIABLES =====
+    
+    # Income (categorical - check actual coding in data)
+    income_level = factor(TTLHHINC, 
+                         ordered = TRUE),
+    
+    # Simplify to 3 categories if needed
+    income_3cat = case_when(
+      TTLHHINC <= 3 ~ "Low",
+      TTLHHINC <= 6 ~ "Middle",
+      TTLHHINC > 6 ~ "High",
+      TRUE ~ NA_character_
+    ),
+    income_3cat = factor(income_3cat, 
+                        levels = c("Low", "Middle", "High"),
+                        ordered = TRUE),
+    
+    # Parent education (check coding)
+    parent_education = factor(PARGRADEX, ordered = TRUE),
+    
+    # Two-parent household
+    two_parent = case_when(
+      P2GUARD == 1 ~ 1,
+      P2GUARD == 2 ~ 0,
+      TRUE ~ NA_real_
+    ),
+    
+    # Private school indicator
+    private_school = case_when(
+      EDCPUB == 1 ~ 0,
+      EDCCAT == 1 | EDCREL == 1 | EDCPRI == 1 ~ 1,
+      TRUE ~ NA_real_
+    ),
+    
+    # Receives government assistance (indicator of need)
+    receives_assistance = case_when(
+      HFOODST == 1 | HMEDICAID == 1 ~ 1,
+      TRUE ~ 0
+    ),
+    
+    # ===== SCHOOL CHOICE =====
+    has_school_choice = case_when(
+      SCCHOICE == 1 | SPUBCHOIX == 1 ~ 1,
+      TRUE ~ 0
+    ),
+    
+    considered_other_schools = case_when(
+      SCONSIDR == 1 ~ 1,
+      SCONSIDR == 2 ~ 0,
+      TRUE ~ NA_real_
+    ),
+    
+    charter_or_magnet = case_when(
+      SCHRTSCHL == 1 | SCHLMAGNET == 1 ~ 1,
+      TRUE ~ 0
+    ),
+    
+    # ===== STUDENT CHARACTERISTICS =====
+    grade_level = ALLGRADEX,
+    
+    male = case_when(
+      CSEX == 1 ~ 1,
+      CSEX == 2 ~ 0,
+      TRUE ~ NA_real_
+    ),
+    
+    race_ethnicity = factor(RACEETH),
+    
+    has_disability = case_when(
+      DSBLTY == 1 ~ 1,
+      DSBLTY == 2 ~ 0,
+      TRUE ~ NA_real_
+    ),
+    
+    num_siblings = NUMSIBSX,
+    
+    # Survey year as factor
+    year = factor(survey_year)
+  )
+
+# Select final analysis variables
+pfi_analysis <- pfi_clean %>%
+  select(
+    # ID
+    BASMID,
+    
+    # Outcomes
+    grades_cat, at_risk, days_absent, meetings_attended,
+    
+    # Engagement composites
+    school_engagement, homework_involvement, cultural_enrichment,
+    
+    # Socioeconomic
+    income_level, income_3cat, parent_education, two_parent,
+    private_school, receives_assistance,
+    
+    # School choice
+    has_school_choice, considered_other_schools, charter_or_magnet,
+    
+    # Student characteristics  
+    grade_level, male, race_ethnicity, has_disability, num_siblings,
+    
+    # Year
+    year
+  )
+
+# Remove rows with missing outcome
+pfi_analysis <- pfi_analysis %>%
+  filter(!is.na(grades_cat))
+
+cat("Final analysis dataset:", nrow(pfi_analysis), "observations\n")
+```
+
+# Save Cleaned Data
+```{r save}
+# Save as RDS for easy loading
+saveRDS(pfi_analysis, "pfi_analysis_data.rds")
+
+cat("Data saved \n")
+```
+
+# Quick Summary
+```{r summary}
+# Summary of key variables
+summary(pfi_analysis %>% select(grades_cat, at_risk, school_engagement,
+                                income_3cat, parent_education))
+
+# Missing data visualization
+vis_miss(pfi_analysis, warn_large_data = FALSE)
+```
