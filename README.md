@@ -3,6 +3,10 @@
 [![R](https://img.shields.io/badge/R-4.0%2B-blue)](https://www.r-project.org/)
 [![tidymodels](https://img.shields.io/badge/tidymodels-1.0%2B-orange)](https://www.tidymodels.org/)
 
+## Live Project Page
+> **[View Interactive Project Page](https://cece15.github.io/educational-equity-family-engagement)**
+> A narrative walkthrough accessible to all audiences — including visualizations and policy implications
+
 > **Research Question:** Does family engagement in education serve a compensatory function, helping disadvantaged students more than their advantaged peers?
 
 ## Project Overview
@@ -285,16 +289,18 @@ Each model makes specific distributional assumptions about the response.
 
 ## Contact
 
+## Contact
+
 **Cynthia Mutua**
-- LinkedIn: [linkedin.com/in/cynthia-mutua]
-- GitHub: [[@ymutuac-bit](https://github.com/mutuac-bit))
+- LinkedIn: [linkedin.com/in/cynthia-mutua](https://linkedin.com/in/cynthia-mutua)
+- GitHub: [github.com/cece15](https://github.com/cece15)
 - Email: cmm.mutua@gmail.com
--      : mutuac@mail.gvsu.edu
 
 ---
 
  **If you found this analysis helpful, please consider giving it a star!**
 
 ## Acknowledgments
+- Co-authored with **Likhitha Chowdary** — GVSU MS Data Science & Analytics
 - NCES for making PFI survey data publicly available
 - tidymodels team for excellent modeling framework
