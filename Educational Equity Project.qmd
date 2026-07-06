@@ -55,7 +55,6 @@ cat("\nColumn names match:", all_match, "\n")
 # Variable Selection & Creation
 ```{r variable_selection}
 # Select key variables for analysis
-# (We'll expand this based on what we see in the data)
 
 key_vars <- c(
   # Identifiers
@@ -197,7 +196,7 @@ pfi_clean <- pfi_combined %>%
     # School meeting frequency (alternative Poisson outcome)
     meetings_attended = FSFREQ,
     
-    # ===== SCHOOL ENGAGEMENT ACTIVITIES =====
+    # ===== SCHOOL ENGAGEMENT ACTIVITIES 
     # Recode from 1=Yes, 2=No to 1=Yes, 0=No
     across(c(FSSPORTX, FSVOL, FSMTNG, FSPTMTNG, FSATCNFN, 
              FSFUNDRS, FSCOMMTE, FSCOUNSLR),
@@ -214,7 +213,7 @@ pfi_clean <- pfi_combined %>%
       na.rm = TRUE
     ),
     
-    # ===== HOMEWORK INVOLVEMENT =====
+    # ===== HOMEWORK INVOLVEMENT 
     # Standardize and create composite
     homework_involvement = scale(
       rowMeans(
@@ -223,7 +222,7 @@ pfi_clean <- pfi_combined %>%
       )
     )[,1],
     
-    # ===== CULTURAL ENRICHMENT =====
+    # ===== CULTURAL ENRICHMENT 
     # Recode monthly activities (1=Yes, 2=No to 1/0)
     across(c(FOLIBRAYX, FOBOOKSTX, FOCONCRTX, FOMUSEUMX, FOZOOX),
            ~case_when(
@@ -256,7 +255,7 @@ pfi_clean <- pfi_combined %>%
     ) / 4) +  # Monthly activities weighted as 1/4 week
     (FODINNERX / 7),  # Dinners as proportion of week
     
-    # ===== SOCIOECONOMIC VARIABLES =====
+    # ===== SOCIOECONOMIC VARIABLES 
     
     # Income (categorical - check actual coding in data)
     income_level = factor(TTLHHINC, 
@@ -296,7 +295,7 @@ pfi_clean <- pfi_combined %>%
       TRUE ~ 0
     ),
     
-    # ===== SCHOOL CHOICE =====
+    # ===== SCHOOL CHOICE 
     has_school_choice = case_when(
       SCCHOICE == 1 | SPUBCHOIX == 1 ~ 1,
       TRUE ~ 0
@@ -313,7 +312,7 @@ pfi_clean <- pfi_combined %>%
       TRUE ~ 0
     ),
     
-    # ===== STUDENT CHARACTERISTICS =====
+    # ===== STUDENT CHARACTERISTICS 
     grade_level = ALLGRADEX,
     
     male = case_when(
