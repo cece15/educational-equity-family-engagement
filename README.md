@@ -1,4 +1,5 @@
-# Educational Equity Project: Statistical Analysis of Family Engagement Effects; Analyzing Compensatory Effects on K-12 Academic Success using Generalized Linear Models
+# Does Family Engagement Help Low-Income Students More?
+### Compensatory effects on K-12 grades, modeled with generalized linear models
 
 [![R](https://img.shields.io/badge/R-4.0%2B-blue)](https://www.r-project.org/)
 [![tidymodels](https://img.shields.io/badge/tidymodels-1.0%2B-orange)](https://www.tidymodels.org/)
@@ -37,31 +38,24 @@ This project analyzes national survey data (N=25,391) to investigate whether par
 ## Repository Structure
 
 ```
-educational-equity-project/
+educational-equity-family-engagement/
 │
-├── data/
-│   ├── pfi_analysis_data.rds          # Cleaned analysis dataset
-│   └── README.md                       # Data dictionary
-│
-├── code/
-│   ├── 01_data_preparation.R          # Import, cleaning, feature engineering
-│   ├── 02_exploratory_analysis.R      # EDA and visualizations
-│   ├── 03_statistical_modeling.R      # GLM implementations
-│   ├── 04_model_evaluation.R          # Cross-validation, diagnostics
-│   └── 05_visualization.R             # Publication-quality plots
-│
-├── output/
-│   ├── figures/                        # All visualizations
-│   ├── tables/                         # Summary tables
-│   └── model_results.rds               # Saved model objects
-│
-├── docs/
-│   ├── analysis_report.pdf             # Full technical report
-│   └── blog_post.md                    # Non-technical summary
-│
-├── README.md                           # This file
-└── educational_equity_analysis.Rproj   # RStudio project file
+├── Educational Equity Project.qmd      # Full report (Quarto)
+├── index.html                          # Project page (GitHub Pages)
+├── figures/
+│   ├── *.png                           # Figures used in the report and page
+│   └── code/
+│       ├── 01_data_preparation.R       # Import, cleaning, feature engineering
+│       ├── 02_exploratory_analysis.R   # EDA and visualizations
+│       ├── 03_statistical_modeling.R   # GLM implementations
+│       ├── 04_model_evaluation.R       # Cross-validation, diagnostics
+│       └── 05_visualization.R          # Final plots
+├── images/                             # Page images
+└── README.md
 ```
+
+The survey data is not committed. The scripts read the NCES PFI extract from
+`pfi-data.xlsx` (sheets "curated 2016" and "curated 2019") in the working directory.
 
 ## Reproducibility
 
@@ -92,16 +86,15 @@ install.packages(c(
 
 ```r
 # Clone repository
-git clone https://github.com/mutuac-bit/educational-equity-family-engagement 
-cd educational-equity-project
+git clone https://github.com/cece15/educational-equity-family-engagement
+cd educational-equity-family-engagement
 
-# Open RStudio project
-# Then run scripts in order:
-source("code/01_data_preparation.R")
-source("code/02_exploratory_analysis.R")
-source("code/03_statistical_modeling.R")
-source("code/04_model_evaluation.R")
-source("code/05_visualization.R")
+# Put pfi-data.xlsx in this folder, then run the scripts in order:
+source("figures/code/01_data_preparation.R")
+source("figures/code/02_exploratory_analysis.R")
+source("figures/code/03_statistical_modeling.R")
+source("figures/code/04_model_evaluation.R")
+source("figures/code/05_visualization.R")
 ```
 
 ## Methods
@@ -201,7 +194,7 @@ lda_spec <- discrim_linear() %>%
 
 ### Model Coefficients
 <img src="figures/coefficient_plot_atrisk.png" width="400">
-## 🔍 Model Diagnostics
+## Model Diagnostics
 
 ### Cross-Validation Strategy
 - 10-fold stratified CV (maintains class proportions)
@@ -222,19 +215,21 @@ All correlations < 0.35 → No multicollinearity concerns
 | Model | Primary Metric | CV Performance | Test Performance | Delta |
 |-------|----------------|----------------|------------------|-------|
 | Multinomial | Accuracy | 0.629 | 0.622 | 0.007 |
-| Binary Logistic | ROC-AUC | 0.802 | 0.213 | 0.589* |
+| Binary Logistic | ROC-AUC | 0.802 | 0.787* | 0.015 |
 | Poisson | RMSE | 4.55 | 4.37 | 0.18 |
 | LDA | Accuracy | 0.626 | 0.621 | 0.005 |
 
-*Binary model suffered from class imbalance overfitting
+*The first test run reported 0.213 because the positive class was set to "not at risk".
+Scored with `event_level = "second"` it is 0.787 (1 − 0.213), close to the CV value. The model
+still has the class imbalance problem described below: it predicts almost no at-risk students.
 
 ## Key Statistical Insights
 
 ### 1. Interaction Effects Matter
 Main effects show "engagement helps." **Interactions** show "engagement helps low-income students MORE"—that's the policy-relevant finding.
 
-### 2. Class Imbalance is Insidious  
-The binary logistic model's high CV performance masked complete failure on minority class. Always check:
+### 2. Class Imbalance Hides Failure
+The binary logistic model's high accuracy masked near-total failure on the minority class (1.3% specificity). Always check:
 - Confusion matrices (not just accuracy)
 - Class-specific metrics (sensitivity/specificity)  
 - Test set ROC curves
@@ -245,9 +240,9 @@ When multinomial logistic and LDA (different assumptions) yield nearly identical
 ### 4. Effect Sizes > P-values
 Homework involvement: OR = 0.59, p < 0.001
 - Statistical significance: ✓
-- Practical significance: 41% reduction in at-risk odds is HUGE
+- Practical significance: a 41% reduction in at-risk odds per standard deviation is large
 
-##  Reflections on Learning Objectives
+## Reflections on Learning Objectives
 
 ### Probability as Foundation
 This project reinforced how probability theory underpins:
@@ -289,16 +284,12 @@ Each model makes specific distributional assumptions about the response.
 
 ## Contact
 
-## Contact
-
 **Cynthia Mutua**
 - LinkedIn: [linkedin.com/in/cynthia-mutua](https://linkedin.com/in/cynthia-mutua)
 - GitHub: [github.com/cece15](https://github.com/cece15)
-- Email: cmm.mutua@gmail.com
+- Email: cmutuaa@gmail.com
 
 ---
-
- **If you found this analysis helpful, please consider giving it a star!**
 
 ## Acknowledgments
 - Co-authored with **Likhitha Chowdary** — GVSU MS Data Science & Analytics

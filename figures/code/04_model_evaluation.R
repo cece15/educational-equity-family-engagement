@@ -102,7 +102,9 @@ logistic_test <- logistic_fit %>%
   bind_cols(test_data %>% dplyr::select(at_risk)) %>%  
   bind_cols(predict(logistic_fit, test_data, type = "prob"))
 
-test_roc_auc <- roc_auc(logistic_test, truth = at_risk, .pred_1)
+# at_risk has levels c("0", "1"), so "1" (at risk) is the second level.
+# Without event_level = "second", yardstick scores "0" as the event and the AUC comes out inverted (0.21 instead of about 0.79).
+test_roc_auc <- roc_auc(logistic_test, truth = at_risk, .pred_1, event_level = "second")
 cat("\nTest set ROC-AUC:", round(test_roc_auc$.estimate, 4), "\n")
 ```
 ##### INTERPRETATION:
